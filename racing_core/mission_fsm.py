@@ -355,6 +355,27 @@ class RaceMission:
         )
 
     # -- helpers ---------------------------------------------------------
+    def target_action(self) -> Action | None:
+        """The action that flies to the current target gate.
+
+        Unlike the actions returned by :meth:`on_pose`, this does **not** mutate
+        state: the ROS layer re-publishes the current target on a timer so the
+        planner and controller always have a fresh reference. Resetting the
+        crossing memory here would make every refresh lose track of which side of
+        the gate plane the vehicle is on.
+        """
+        gate = self.target_gate()
+        if gate is None:
+            return None
+        return Action(
+            kind=ActionKind.FLY_GATE,
+            gate_id=gate.id,
+            waypoints=_lead_waypoints(gate, self.lead),
+            heading=gate.yaw,
+            speed=self.speed,
+            detail=f"refresh gate {gate.id}",
+        )
+
     def _gate_action(self, gate: Gate, detail: str = "") -> Action:
         self._target_side = 0
         return Action(

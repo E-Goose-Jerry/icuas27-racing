@@ -79,6 +79,31 @@ class MissionTest(unittest.TestCase):
             self.mission.on_takeoff_complete(0.0)
 
     # -- waypoints -------------------------------------------------------
+    def test_target_action_refreshes_without_mutating_state(self) -> None:
+        # The ROS layer re-publishes the current target on a timer. That refresh
+        # must not reset the crossing memory, otherwise the vehicle forgets which
+        # side of the gate plane it is on every second.
+        mission = RaceMission(course=straight_course())
+        mission.start(0.0)
+        mission.on_takeoff_complete(0.0)
+        gate = mission.course.gates[0]
+        mission.on_pose(1.0, before(gate))          # remembers side = -1
+        for index in range(3):
+            action = mission.target_action()
+            self.assertIsNotNone(action)
+            self.assertEqual(action.gate_id, 1)
+            self.assertEqual(len(action.waypoints), 3)
+        # still credited after the refreshes
+        actions = mission.on_pose(1.5, after(gate))
+        self.assertEqual(mission.index, 1)
+        self.assertEqual(actions[0].gate_id, 2)
+
+    def test_target_action_is_none_outside_the_race(self) -> None:
+        mission = RaceMission(course=straight_course())
+        self.assertIsNone(mission.target_action())
+        mission.start(0.0)
+        self.assertIsNone(mission.target_action())
+
     def test_target_gate_is_none_before_the_race(self) -> None:
         self.mission.start(0.0)  # TAKEOFF, not RACE yet
         self.assertIs(self.mission.state, State.TAKEOFF)

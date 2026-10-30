@@ -27,7 +27,7 @@ from std_msgs.msg import String
 from std_srvs.srv import Trigger
 
 try:  # laser_msgs comes from the official LUS workspace
-    from laser_msgs.msg import PoseWithHeading, TrajectoryPath
+    from laser_msgs.msg import ApiPx4Diagnostics, PoseWithHeading, TrajectoryPath
 except ImportError as exc:  # pragma: no cover - environment problem, not logic
     raise SystemExit(
         "laser_msgs is not available. Source the LASER UAV System workspace first: "
@@ -79,6 +79,19 @@ class RaceNode(Node):
         self.status_topic = str(
             self.declare_parameter("status_topic", "/icuas27/race_status_json").value
         )
+        # planning_manager accepts a trajectory only when it has a fresh control
+        # state AND fresh odometry in the same evaluation. A single publish from
+        # an odometry callback therefore gets rejected with
+        #   "fresh control state and odometry in the same frame are required"
+        # so the current target is re-sent on a timer instead of once per event.
+        self.republish_period = float(
+            self.declare_parameter("republish_period", 1.0).value
+        )
+        # Grace window at start-up: "never received a heartbeat" is not the same
+        # as "heartbeat is stale". Restarting this node while the vehicle is
+        # already airborne used to abort instantly, because the first odometry
+        # callback ran before any diagnostics had arrived.
+        self.fcu_grace = float(self.declare_parameter("fcu_grace", 5.0).value)
 
         # -- course and mission -------------------------------------------
         try:
@@ -119,6 +132,15 @@ class RaceNode(Node):
         self.path_topic = f"{base}/planning_manager/trajectory_path"
 
         self.create_subscription(Odometry, self.odom_topic, self._on_odom, sensor_qos)
+        # The safety monitor requires a fresh flight-controller heartbeat once
+        # airborne. Without this subscription _last_fcu_at stayed None and the
+        # first airborne tick aborted with "no flight-controller state received".
+        self.create_subscription(
+            ApiPx4Diagnostics,
+            f"{base}/hw_api/diagnostics",
+            self._on_fcu_diagnostics,
+            10,
+        )
 
         self.path_pub = self.create_publisher(TrajectoryPath, self.path_topic, 10)
         self.status_pub = self.create_publisher(String, self.status_topic, 10)
@@ -135,12 +157,15 @@ class RaceNode(Node):
         self._last_pose: Vec3 | None = None
         self._last_pose_at: float | None = None
         self._last_fcu_at: float | None = None
+        self._fcu_armed = False
         self._airborne = False
         self._seq = 0
         self._started_at: float | None = None
         self._last_status_write = 0.0
         self._abort_latched = False
         self._stuck_logged = False
+        self._last_path_publish = 0.0
+        self._started_at = _stamp_seconds(self)
 
         period = 1.0 / max(1.0, self.publish_rate)
         self.create_timer(period, self._tick)
@@ -151,6 +176,11 @@ class RaceNode(Node):
         )
 
     # -- callbacks --------------------------------------------------------
+    def _on_fcu_diagnostics(self, message: ApiPx4Diagnostics) -> None:
+        """Timestamp the flight-controller heartbeat for the safety monitor."""
+        self._last_fcu_at = _stamp_seconds(self)
+        self._fcu_armed = bool(message.armed)
+
     def _on_odom(self, message: Odometry) -> None:
         now = _stamp_seconds(self)
         position = message.pose.pose.position
@@ -164,7 +194,11 @@ class RaceNode(Node):
             pose_at=self._last_pose_at,
             pose=pose,
             fcu_at=self._last_fcu_at,
-            require_fcu=self._airborne,
+            require_fcu=self._airborne
+            and (
+                self._last_fcu_at is not None
+                or now - self._started_at > self.fcu_grace
+            ),
             airborne=self._airborne,
         )
         if verdict.level is Level.ABORT and not self._abort_latched:
@@ -188,6 +222,8 @@ class RaceNode(Node):
             self._stuck_logged = True
         elif not self.mission.stuck:
             self._stuck_logged = False
+        self._last_path_publish = 0.0
+        self._started_at = _stamp_seconds(self)
         self._dispatch(actions, now)
 
     def _tick(self) -> None:
@@ -210,7 +246,25 @@ class RaceNode(Node):
                 self.get_logger().info("auto_start: beginning the attempt")
                 self._handle_start(now)
 
+        self._republish_target(now)
         self._publish_status(now)
+
+    def _republish_target(self, now: float) -> None:
+        """Keep the planner fed with the current gate target.
+
+        The planner rejects requests it cannot evaluate synchronously, and the
+        controller needs a reference that never expires (0.5 s timeout), so the
+        target is refreshed on a timer rather than only when the state machine
+        changes. Gated on ``republish_period`` to stay cheap.
+        """
+        gate = self.mission.target_gate()
+        if gate is None:
+            return
+        if now - self._last_path_publish < self.republish_period:
+            return
+        action = self.mission.target_action()
+        if action is not None:
+            self._publish_path(action)
 
     def _on_control(self, request: RaceControl.Request, response: RaceControl.Response):
         command = (request.command or "").strip().lower()
@@ -292,6 +346,7 @@ class RaceNode(Node):
             waypoint.heading = float(action.heading if action.heading is not None else 0.0)
             message.waypoints.append(waypoint)
         self.path_pub.publish(message)
+        self._last_path_publish = _stamp_seconds(self)
         self.get_logger().debug(
             f"published {len(message.waypoints)} waypoints at {message.speed:.2f} m/s"
         )

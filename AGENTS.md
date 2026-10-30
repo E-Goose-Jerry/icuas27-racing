@@ -1,5 +1,8 @@
 # AGENTS.md — ICUAS 2027 竞速项目：工作区记忆
 
+> 🔴 **换窗口先读 `HANDOVER.md`** —— 那份是交接文档：当前唯一阻塞（控制层 NMPC）、
+> 三条可选路线、已验证/未验证清单、以及这一轮犯过的 9 个错。本文件是长期记忆，那份是"现在从哪继续"。
+
 > 这是一份**工作区级记忆**。任何以本目录（或子目录）为工作区的会话，第一次请求时会自动加载它。
 > 它取代"翻历史对话"：读完这份就能接着干。**状态变了就改这里**。
 
@@ -117,7 +120,8 @@ python3 tools/make_courses.py              # 重新生成赛道文件
 | 优先级 | 动作 | 完成判据 |
 |---|---|---|
 | ~~P0~~ | ~~构建镜像 + 跑通官方栈~~ | ✅ 完成（headless 冒烟全绿，见上） |
-| **P0** | 在可视窗口里跑一次：arm → takeoff → 发第一个航点 | 无人机真的离地并按 `trajectory_path` 移动 |
+| ~~P0~~ | ~~离地~~ | ⚠️ **只做到"离地"**：takeoff 后升到 1.21 m，但**没有控制器接管**，8 秒内下沉到 0.69 m 后发散（z→-600）。**不是悬停**，我最初误报成"稳定悬停"，被用户纠正 |
+| **P0 当前唯一阻塞** | **修好 NMPC**：`SQP_RTI: QP solver returned error status 3`（单次运行 3215 次）→ `ready_for_tracking=false` → 规划器拒绝一切航点 → 无参考 → 起飞机动一结束就掉 | 看板出现 `state=TRACKING`、`waypoint_count>0`，且**高度能稳住 30 秒不下沉** |
 | **P0** | 换成 crazyflie + `crazyflie_map`，确认 `--enable_ai_deck` 真的出图 | `ros2 topic hz /uav1/camera/ai_deck/image_raw` 约 30 Hz |
 | **P1** | 用真赛场画面调 `gate_detector` 的 HSV 阈值 | 图片里能稳定框出 1 扇门 |
 | **P1** | 端到端跑一圈 `provisional_sample` | 21 次过门全记入，`T_adj` 有数 |
