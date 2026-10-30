@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "member": "Dimitri-Yu",
+  "date": "2026-10-30",
+  "timezone": "Asia/Hong_Kong",
+  "scope": "One virtual checkpoint in Gazebo/PX4, not real-gate vision navigation",
+  "source": "Extracted from previously saved local test records; no tests rerun for this documentation publication",
+  "competition_baseline": "a577db7af5dc1a2c0db2d7372a3c45d5ff86ae4c",
+  "reviewed_upstream_main": "7a35305745da13310f0fc9bb3a312b9cba3b532f",
+  "code_status": "Local uncommitted adaptations; not included in this documentation publication",
+  "tests": {
+    "core": 149,
+    "ros_and_adapter": 31
+  },
+  "environment": {
+    "host": "macOS / M3 Pro / 18 GB",
+    "guest": "Ubuntu 22.04 ARM64 / Parallels / 4 vCPU / 8 GB",
+    "ros": "Humble",
+    "gazebo": "Classic 11.10.2",
+    "state_source": "simulation ground truth",
+    "real_uav": false
+  },
+  "trials": [
+    {
+      "local_record_name": "ground-truth-pass-1.json",
+      "passed": true,
+      "states": [
+        "IDLE",
+        "TAKEOFF",
+        "RACE",
+        "LANDING",
+        "DONE"
+      ],
+      "course": "integration_smoke_virtual_checkpoint",
+      "virtual_checkpoints_completed": 1,
+      "laps_completed": 1,
+      "virtual_checkpoint_elapsed_sim_seconds": 2.73,
+      "message_counts": {
+        "race": 489,
+        "api": 616,
+        "truth": 4349,
+        "image": 1302,
+        "vision": 1302,
+        "estimate": 4205,
+        "motors": 7259
+      }
+    },
+    {
+      "local_record_name": "latest.json",
+      "passed": true,
+      "states": [
+        "IDLE",
+        "TAKEOFF",
+        "RACE",
+        "LANDING",
+        "DONE"
+      ],
+      "course": "integration_smoke_virtual_checkpoint",
+      "virtual_checkpoints_completed": 1,
+      "laps_completed": 1,
+      "virtual_checkpoint_elapsed_sim_seconds": 2.725,
+      "message_counts": {
+        "race": 489,
+        "api": 619,
+        "truth": 4262,
+        "image": 1276,
+        "vision": 1276,
+        "estimate": 4119,
+        "motors": 7766
+      }
+    }
+  ],
+  "not_validated": [
+    "physical_gate_traversal",
+    "vision_based_navigation",
+    "seven_gate_multilap_course",
+    "real_drone",
+    "teammate_clean_Dockerfile_rebuild",
+    "teammate_Docker_path_not_reproduced_on_this_Mac",
+    "full_course_realtime_performance"
+  ],
+  "raw_logs_published": false
+}
