@@ -29,6 +29,14 @@ if [ -f /opt/icuas27_racing/ros2_ws/install/setup.bash ]; then
 fi
 
 # -- Gazebo Classic ----------------------------------------------------------
+# /usr/share/gazebo/setup.bash sets GAZEBO_RESOURCE_PATH, which gzclient needs to
+# find its shader library. Without it the GUI dies with
+#   "Unable to find shader lib" -> "Failed to initialize scene" -> a Camera
+#   assertion and a core dump, while gzserver is perfectly happy (the server does
+#   not need shaders). The official installer only appends this to ~/.bashrc.
+if [ -f /usr/share/gazebo/setup.bash ]; then
+    source /usr/share/gazebo/setup.bash
+fi
 # The PX4 SITL plugins live outside the default search path. Without these two
 # variables gzserver silently fails to load them, PX4 gets no sensor data, the
 # EKF never initialises, and /uav1/hw_api/odometry simply never appears -- with

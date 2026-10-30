@@ -96,7 +96,7 @@ ground_station/     stdlib HTTP + SSE + 单页看板（无构建、无依赖）
 sim/                Dockerfile、非交互 bootstrap、tmux 会话、spawn/planning 配置
 course/             赛道 JSON（临时样例 + 规则书形状模板）
 tools/              赛道生成、起飞前检查
-docs/               架构、官方接口、赛道、复用清单、踩坑、规则要点
+docs/               架构、官方接口、赛道、复用清单、踩坑、规则要点、环境排障日志
 ```
 
 ---
@@ -115,6 +115,12 @@ docs/               架构、官方接口、赛道、复用清单、踩坑、规
 | 真机飞行 | ❌ 未做（决赛 2027-06） |
 
 所以：**环境已通，飞行未验**。下一步是 `./sim/run_sim.sh sim`（需要显示器）。
+
+构建与仿真过程中踩过的每一个坑（X 授权、GPU、shader、`REAL_UAV` 引号、`.bashrc` 守卫……）
+都按"现象 → 根因 → 修法 → 验证"记在
+[docs/07-环境与仿真排障日志.md](docs/07-环境与仿真排障日志.md) 里，重建镜像时照着走一遍即可。
+
+![Gazebo：7 个门框](docs/shots/gazebo-arena.png)
 
 ---
 

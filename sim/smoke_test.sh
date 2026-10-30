@@ -8,6 +8,7 @@
 #
 #   ./sim/smoke_test.sh            # full check, prints a verdict, tears down
 #   ./sim/smoke_test.sh --keep     # leave everything running in container "smoke"
+#   ./sim/smoke_test.sh --visual   # open the Gazebo window (needs an X display)
 #
 # Two things cost real debugging time here, so they are stated up front:
 #   * `docker exec` does NOT run the image entrypoint, so every exec has to
@@ -20,7 +21,13 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 IMAGE="${ICUAS27_IMAGE:-icuas27-racing:local}"
 NAME="${ICUAS27_SMOKE_NAME:-smoke}"
 KEEP=0
-[ "${1:-}" = "--keep" ] && KEEP=1
+VISUAL=0
+for arg in "$@"; do
+    case "${arg}" in
+        --keep)   KEEP=1 ;;
+        --visual) VISUAL=1; KEEP=1 ;;
+    esac
+done
 
 FAILS=0
 log()  { printf '\033[1;34m==> %s\033[0m\n' "$*"; }
@@ -43,13 +50,34 @@ run() { docker exec "${NAME}" bash -c "${ENV_SETUP} $*"; }
 
 docker rm -f "${NAME}" >/dev/null 2>&1 || true
 
-log "starting the container (headless, no X11)"
+if [ "${VISUAL}" -eq 1 ]; then log "starting the container (X11: ${DISPLAY})"; else log "starting the container (headless)"; fi
 # root + HOME=/opt: LUS scripts expand `~/git/laser_uav_system`, and PX4 needs a
 # passwd entry for the uid it runs as. See sim/run_sim.sh for the same note.
-docker run -d --name "${NAME}" --net host \
-    -e HOME=/opt \
-    -v "${PROJECT_ROOT}:/opt/icuas27_racing" \
-    "${IMAGE}" sleep infinity >/dev/null
+if [ "${VISUAL}" -eq 1 ]; then
+    [ -n "${DISPLAY:-}" ] || { echo "no DISPLAY set; run from a graphical session" >&2; exit 1; }
+    echo "  display: ${DISPLAY}"
+    # X authorisation: mounting the socket is not enough, the container also
+    # needs the cookie. Without it gzclient dies with
+    # "Authorization required, but no authorization protocol specified".
+    XAUTH_FILE="${XAUTHORITY:-$HOME/.Xauthority}"
+    local_auth=()
+    if [ -f "${XAUTH_FILE}" ]; then
+        local_auth=(-v "${XAUTH_FILE}:/root/.Xauthority:ro" -e XAUTHORITY=/root/.Xauthority)
+    else
+        echo "  [warn] no Xauthority file; gzclient may be refused by the X server" >&2
+    fi
+    docker run -d --name "${NAME}" --net host --ipc host \
+        -e HOME=/opt -e DISPLAY="${DISPLAY}" \
+        "${local_auth[@]}" \
+        -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+        -v "${PROJECT_ROOT}:/opt/icuas27_racing" \
+        "${IMAGE}" sleep infinity >/dev/null
+else
+    docker run -d --name "${NAME}" --net host \
+        -e HOME=/opt \
+        -v "${PROJECT_ROOT}:/opt/icuas27_racing" \
+        "${IMAGE}" sleep infinity >/dev/null
+fi
 
 cleanup() {
     if [ "${KEEP}" -eq 1 ]; then
@@ -69,10 +97,17 @@ run 'ros2 pkg prefix icuas27_racing >/dev/null 2>&1 && echo PKG_OK' | grep -q PK
 run 'ros2 pkg prefix laser_uav_managers >/dev/null 2>&1 && echo LUS_OK' | grep -q LUS_OK \
     && ok "laser_uav_managers built" || bad "LUS not built"
 
-log "2. gzserver (physics only, no window)"
-run 'nohup ros2 launch gazebo_ros gzserver.launch.py \
-      world:=/opt/git/laser_uav_system/ros_packages/laser_gazebo_resources/worlds/crazyflie_map.world \
-      verbose:=false > /tmp/gzserver.log 2>&1 &' >/dev/null 2>&1
+if [ "${VISUAL}" -eq 1 ]; then
+    log "2. gazebo with window (gzserver + gzclient, world crazyflie_map)"
+    run 'nohup ros2 launch laser_uav_simulation gazebo.launch.py \
+          world:=crazyflie_map real_time:=1.0 verbose:=false \
+          > /tmp/gzserver.log 2>&1 &' >/dev/null 2>&1
+else
+    log "2. gzserver (physics only, no window)"
+    run 'nohup ros2 launch gazebo_ros gzserver.launch.py \
+          world:=/opt/git/laser_uav_system/ros_packages/laser_gazebo_resources/worlds/crazyflie_map.world \
+          verbose:=false > /tmp/gzserver.log 2>&1 &' >/dev/null 2>&1
+fi
 sleep 10
 run 'pgrep -x gzserver >/dev/null && echo GZ_RUNNING' | grep -q GZ_RUNNING \
     && ok "gzserver running" \

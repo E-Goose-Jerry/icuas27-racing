@@ -62,8 +62,10 @@
 1. **官方 `session.yml` 里那 19 个 Race 航点不是门中心**。第 4、5 个点水平只差 0.52 m、
    高度差 3.35 m —— 两扇水平门不可能这样摆。它们是飞行路径点。
    所以 `course/provisional_sample.json` 的门朝向全是估计值（`yaw_source: "estimated"`）。
-2. **`crazyflie_map.world` 里没有门**。里面是 7 个 0.2–0.6 m 的障碍箱（拆 OBJ 算包围盒验证过），
-   是演示场，不是场馆。详见 `docs/03-赛道与门.md`。
+2. **`crazyflie_map.world` 里就是 7 个门框**（`base_crazyrun` 地面 + `obstacles_crazyrun` 7 扇门）。
+   ⚠️ 先前"没有门、只有小障碍箱"的判断是**错的** —— 把 OBJ 的 `o` 分组当成了整体，
+   实际每组只是门框的一根立柱/横梁。渲染后一目了然（`docs/shots/gazebo-arena.png`）。
+   门框位姿可从 `obstacles_crazyrun.obj` 解析，见 `docs/03-赛道与门.md`。
 3. **LUS 只支持 Ubuntu 22.04 + ROS 2 Humble**，本机是 24.04 + Jazzy。
    所以**必须走 Docker**，不要试图往 24.04 里硬装。
 
