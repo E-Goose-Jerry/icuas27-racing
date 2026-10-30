@@ -11,7 +11,7 @@
 # rest to the official `install.sh` in its CI branch (see bootstrap_lus.sh).
 # The split is deliberate: the apt layer here is ours and cached, while the LUS
 # build stays exactly the sequence the organisers test.
-FROM ubuntu:22.04
+FROM ubuntu:22.04 AS base
 
 ENV DEBIAN_FRONTEND=noninteractive \
     LANG=C.UTF-8 \
@@ -73,6 +73,24 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip wheel \
         setuptools kconfiglib jsonschema pyros pyros-genmsg future
 
 # -- LASER UAV System: official installer, CI branch -------------------------
+#
+# Separate stage on purpose: `docker build --target base` gives an image with the
+# whole (slow) apt layer, so the LUS build can be iterated in a container where
+# the PX4 firmware and acados builds survive a failed attempt. Rebuilding this
+# stage from scratch costs ~25 minutes; iterating in the container costs seconds.
+FROM base AS lus
+
+# NOTE: REAL_UAV deliberately keeps its plain `false` value here.
+#
+# Two consumers disagree about this variable, and both are load-bearing:
+#   * install.sh compares against FALSE='"false"' in its CI branch, so it needs
+#     the QUOTED form -- bootstrap_lus.sh exports that for the duration of the
+#     install and nothing else.
+#   * px4_api.launch.py builds a Python expression out of the environment
+#     ('"' + REAL_UAV + '" == "false"'), so a quoted value is a syntax error and
+#     the launch dies.
+# The image therefore ships the plain value; only the build step overrides it.
+
 COPY bootstrap_lus.sh /opt/bootstrap_lus.sh
 RUN chmod +x /opt/bootstrap_lus.sh && /opt/bootstrap_lus.sh
 
@@ -96,6 +114,12 @@ export ICUAS27_PLATFORM=sim
 export ICUAS27_PROJECT_ROOT=/opt/icuas27_racing
 export ICUAS27_STATUS_FILE=/tmp/icuas27_race/status.json
 EOF
+
+# One environment file for every shell. `docker exec`, launch subprocesses and the
+# entrypoint all need ROS + Gazebo paths; only the entrypoint used to get them,
+# which made "works in entrypoint, empty in exec" the default failure mode.
+COPY icuas27_env.sh /opt/icuas27_env.sh
+ENV BASH_ENV=/opt/icuas27_env.sh
 
 COPY entrypoint.sh /opt/entrypoint.sh
 RUN chmod +x /opt/entrypoint.sh

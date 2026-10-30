@@ -28,7 +28,10 @@ windows:
       layout: even-horizontal
       panes:
         - sleep 1; ros2 launch laser_uav_hw_api px4_api.launch.py
-        - sleep 1; ros2 run laser_uav_simulation autostart.py
+        # autostart.py is NOT started: it calls hw_api/arm + control_manager/takeoff
+        # on its own, which would race with /icuas27/race_control start. The race
+        # node owns arming and takeoff; uncomment only if flying the stack by hand.
+        - sleep 1; ros2 topic hz /$UAV_NAME/hw_api/odometry
   - estimation:
       layout: tiled
       panes:

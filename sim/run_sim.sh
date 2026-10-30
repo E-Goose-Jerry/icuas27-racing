@@ -49,8 +49,18 @@ check() {
 }
 
 run_container() {
+    # Runtime runs as root for two concrete reasons, both learned the hard way:
+    #   * LUS scripts hardcode `~/git/laser_uav_system`, so HOME must be the
+    #     directory that holds it -> /opt.
+    #   * PX4/Gazebo look the uid up in /etc/passwd; a bare host uid has no
+    #     record and the spawn script dies with "no matching password record".
+    # Colcon builds use run_container_as_user instead, so build artefacts in the
+    # bind-mounted project stay owned by the host user.
+    local tty_flag="-it"
+    [ -t 0 ] || tty_flag="-i"
     local -a args=(
-        --rm -it
+        --rm "${tty_flag}"
+        -e HOME=/opt
         --net host
         --ipc host
         -e DISPLAY="${DISPLAY:-:0}"
@@ -69,9 +79,16 @@ build_image() {
     log "image ready: ${IMAGE}"
 }
 
+run_container_as_user() {
+    docker run --rm -i --net host \
+        --user "$(id -u):$(id -g)" -e HOME=/tmp \
+        -v "${PROJECT_ROOT}:/opt/icuas27_racing:rw" -w /opt/icuas27_racing \
+        "${IMAGE}" "$@"
+}
+
 build_race() {
     log "building the competition ROS packages inside the container"
-    run_container bash -lc '
+    run_container_as_user bash -lc '
         set -e
         cd /opt/icuas27_racing/ros2_ws
         colcon build --symlink-install --packages-up-to icuas27_racing

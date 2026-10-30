@@ -47,11 +47,12 @@
 | `racing_core`（几何/赛道/状态机/计时/安全/契约） | ✅ 完成，**148 个单测全过** |
 | 地面站（stdlib HTTP + SSE + 看板） | ✅ 完成，**实测可跑**（`--mock` 回放 + 真实 socket 测试） |
 | ROS 包（interfaces + racing + 检测器） | ⚠️ 代码完成、Python 部分 22 个测试过，**节点从未在 ROS 下运行** |
-| 仿真容器 | ⚠️ Dockerfile/bootstrap **已按官方 CI 分支重写**，**从未构建成功过**（首次 40–60 分钟） |
+| 仿真容器 | ✅ **已构建成功**：`icuas27-racing:local`（19.8 GB），PX4 固件 / MicroXRCEAgent / acados / 35 个 ROS 包齐全 |
+| 官方栈 headless 冒烟 | ✅ **通过**：`./sim/smoke_test.sh`，里程计 100.3 Hz，race 节点服务与状态文件正常 |
 | 门检测在真实画面上 | ❌ 颜色阈值**完全没调过**，必须对实际画面调 |
 | 真机 | ❌ 未开始（决赛 2027-06） |
 
-**一句话：逻辑可信，链路未通。下一步是 `./sim/run_sim.sh build`。**
+**一句话：环境通了，还没飞。下一步是 `./sim/run_sim.sh sim`（要屏幕）或先跑 `./sim/smoke_test.sh`。**
 
 看板实拍（mock 回放，第 2 圈，8/21）：`docs/dashboard-mock.png`
 
@@ -113,7 +114,8 @@ python3 tools/make_courses.py              # 重新生成赛道文件
 
 | 优先级 | 动作 | 完成判据 |
 |---|---|---|
-| **P0** | `./sim/run_sim.sh build` 构建镜像并跑通官方 tmux 会话（x500 也行） | Gazebo 里能起飞、`planning_manager` 有 `reference_horizon` |
+| ~~P0~~ | ~~构建镜像 + 跑通官方栈~~ | ✅ 完成（headless 冒烟全绿，见上） |
+| **P0** | 在可视窗口里跑一次：arm → takeoff → 发第一个航点 | 无人机真的离地并按 `trajectory_path` 移动 |
 | **P0** | 换成 crazyflie + `crazyflie_map`，确认 `--enable_ai_deck` 真的出图 | `ros2 topic hz /uav1/camera/ai_deck/image_raw` 约 30 Hz |
 | **P1** | 用真赛场画面调 `gate_detector` 的 HSV 阈值 | 图片里能稳定框出 1 扇门 |
 | **P1** | 端到端跑一圈 `provisional_sample` | 21 次过门全记入，`T_adj` 有数 |
@@ -133,8 +135,9 @@ python3 tools/make_courses.py              # 重新生成赛道文件
 
 ## 9. 未验证清单（别当成已验证）
 
-- [ ] ROS 节点在 `rclpy` 下运行
-- [ ] 仿真容器构建
+- [x] ROS 节点在 `rclpy` 下运行（race_mission 已在容器里起服务并写状态文件）
+- [x] 仿真容器构建（`icuas27-racing:local`）
+- [ ] 真正起飞并穿过第一个门
 - [ ] `trajectory_path` 发一次能否让 PMM 一直飞到终点（可能要在飞的过程中重发）
 - [ ] `autostart.py` 与 `race_control` 的 start 命令抢解锁时序
 - [ ] 门检测在 mono8 324×244 上的表现

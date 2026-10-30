@@ -22,7 +22,7 @@ setup(
     maintainer_email="duanqinruiwang@gmail.com",
     description="ICUAS 2027 racing: gate detection, race mission, ground-station bridge",
     license="BSD-3-Clause",
-    tests_require=["pytest"],
+    extras_require={"test": ["pytest"]},
     entry_points={
         "console_scripts": [
             "race_mission = icuas27_racing.race_node:main",
