@@ -97,6 +97,9 @@ sim/                Dockerfile、非交互 bootstrap、tmux 会话、spawn/plann
 course/             赛道 JSON（临时样例 + 规则书形状模板）
 tools/              赛道生成、起飞前检查
 docs/               架构、官方接口、赛道、复用清单、踩坑、规则要点、环境排障日志
+  ├ 08-新系统搭建-agent指引.md   给 AI agent 的执行清单（每步带 CHECK）
+  ├ 09-新系统搭建-人类手册.md    给人类的手册（同内容的 PDF 在 docs/pdf/）
+  └ pdf/新系统搭建手册.pdf        6 页 A4，手机上能看
 ```
 
 ---
@@ -121,6 +124,10 @@ docs/               架构、官方接口、赛道、复用清单、踩坑、规
 [docs/07-环境与仿真排障日志.md](docs/07-环境与仿真排障日志.md) 里，重建镜像时照着走一遍即可。
 
 ![Gazebo：7 个门框](docs/shots/gazebo-arena.png)
+
+换一台机器、或者队友要搭一套时，看这两份就够：
+[给 agent 的清单](docs/08-新系统搭建-agent指引.md)（可照着执行）、
+[给人的手册](docs/pdf/新系统搭建手册.pdf)（6 页 PDF，手机上能看）。
 
 ---
 
