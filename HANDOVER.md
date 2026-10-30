@@ -8,8 +8,23 @@
 
 ## 一句话现状
 
-**环境全部打通，飞机能离地，但飞不起来** —— 外环（NMPC）从第一次求解就失败，
-内环（INDI）拿不到电机反馈，导致起飞机动一结束就掉。**其余所有层都已验证可用。**
+**环境全部打通，飞机能离地，但飞不起来。**
+
+但**先看这条**：队友 Dimitri-Yu 已经在原生 Ubuntu 22.04 上跑通过完整短程流程
+（起飞 → 虚拟检查点 → 返回 → 落地 → 解除解锁，`IDLE→TAKEOFF→RACE→LANDING→DONE`，
+两次成功、2.73 s 仿真时间）。**他的做法和我们的不一样**，而且适配代码还没上传。
+所以第一优先级不是调 NMPC，而是**对齐他的路径**。
+
+他用的两条关键做法（见 `对接进度/Dimitri-Yu/2026-10-30.md`）：
+
+1. **`lus_backend=control_manager`** —— 这个版本的官方 PMM 规划器**在 control_manager 内部**，
+   他把独立的 `planning_manager` 绕开了（原话："保留独立 planning_manager 的原默认路径，但后者尚未在本机实测"）。
+   → 我们卡住的正是那条"未实测"的路径。
+2. **仿真真值适配** —— 他遇到的问题是"接地后估计高度向下漂移"，
+   和我这边 z 从 1.21 掉到 -600 是**同一个现象**（MEKF 估计发散）。他改用 Gazebo 真值跑通。
+
+**他还确认了**：相机可用（324×244 mono8，两轮各 1302/1276 帧）；
+场景里确实是 **7 个门框**；未修改任何控制增益与机体参数。
 
 ---
 
@@ -65,7 +80,20 @@ docker exec sim cat /tmp/icuas27_race/status.json
 
 ---
 
-## 当前唯一阻塞：控制层
+## ⚠️ 版本不一致（他明确要求核对的第一件事）
+
+| 依赖 | 本仓库镜像 | Dimitri-Yu 验证过的 | |
+|---|---|---|---|
+| LUS 根仓库 | `b72dbc1bbf6e434f014ab0e93cd2b7c410c992fc` | `ef820aa947dacefe50650872dac72685961ace3a` | ⚠️ **不同** |
+| `laser_uav_managers` | `770afe444bdb984cc90809c9c12d3281e408bf16` | `7a1964bdd01d6bda6bcd40abcd1252428ed1431b` | ⚠️ **不同** |
+| `laser_uav_controllers` | `fca756ad4c2113077ca4000b3103af787b92eeeb` | — | — |
+| `laser_uav_planners` | `8aa841c1676601d73cfaa1873685dd6947a4204c` | — | — |
+| `laser_crazyflie` | `05f55a5cff530c12dccfcf17a288d7a5ea02b258` | `05f55a5cff530c12dccfcf17a288d7a5ea02b258` | ✅ 相同 |
+
+我们的镜像是 `git clone -b stable` 当时的最新，他是固定到某个 commit。**管理器的控制代码不同，
+这本身就可能解释"他能飞、我们不能"。** 复核版本应当是第一步，而不是继续调参。
+
+## 当前阻塞：控制层（可能是版本/后端选择问题，不一定是算法问题）
 
 两个独立缺陷，详细分析在 **`docs/07-环境与仿真排障日志.md` §14.6**，这里只放结论：
 
@@ -94,7 +122,8 @@ NMPC 失败 → ready_for_tracking=false
 
 | 路线 | 做法 | 代价 | 我的建议 |
 |---|---|---|---|
-| **A. 调 NMPC** | `R: 1000 → 5`，`N: 20 → 10`，看 QP 是否收敛 | 改 yaml 重启，10 分钟见结果 | **先试这个**，成本最低 |
+| **0. 对齐队友** | 找 Dimitri-Yu 要那份适配（`lus_backend=control_manager` + 真值适配），并把 LUS/managers 固定到他的 commit | 等他把适配传上来；或自己复刻 | **最高优先级**。他已经验证过能飞，我们没验证的是那条路 |
+| **A. 调 NMPC** | `R: 1000 → 5`，`N: 20 → 10`，看 QP 是否收敛 | 改 yaml 重启，10 分钟见结果 | 只在路线 0 走不通时试 |
 | **B. 换控制模式** | `angular_rates_and_thrust`，绕开逐电机分配 | 要改 `px4_api` 让它订阅该话题 | 动上游，1–2 小时 |
 | **C. 绕开 NMPC** | 用 PX4 自带位置/速度控制器（offboard setpoint）+ 自写轨迹跟踪 | 新写控制节点 + 桥 | A 不成就走这条：**竞速比的是稳定飞到门，不是用没用 NMPC** |
 
@@ -119,14 +148,15 @@ NMPC 失败 → ready_for_tracking=false
 
 ---
 
-## 已提交的 4 个 commit
+## 已提交的 commit
 
 | SHA | 内容 |
 |---|---|
 | `53472e4` | 能跑的镜像 + headless 冒烟测试 |
 | `a577db7` | 环境与仿真排障日志（13 个坑） |
 | `7a35305` | 两份上手文档（agent 版 + 人类版 PDF） |
-| 本次 | 交接文档 + 起飞阶段的修复（见下） |
+| `2551356` | 起飞阶段的修复 + 交接文档（变基到队友的 `375a75d` 之上） |
+| `375a75d` 等 3 个 | **Dimitri-Yu** 的对接进度文档（他的验证结果就在这里） |
 
 ## 本次会话的最后一批改动（**都在本地，等你决定是否提交**）
 
@@ -137,6 +167,7 @@ NMPC 失败 → ready_for_tracking=false
 | `tests/test_mission_fsm.py` | 两个新测试：重发不改变状态、`target_action` 在非 RACE 返回 None（**151 个测试全过**） |
 | `sim/bringup.sh` | **新增**：一键起全套，自动打两个上游补丁 + 按顺序启动 + 校验生命周期 |
 | `docs/07` / `AGENTS.md` | 加了 §14.5/§14.6（首飞与控制层分析），并把"稳定悬停"这个**错误表述**改掉 |
+| `HANDOVER.md` | **新增**：本文件 |
 
 ⚠️ **`takeoff` 请求排队重试还没做完**：现在节点在服务未就绪时仍然会丢请求
 （首飞时就是因此重来了一次）。`bringup.sh` 起来后手动发 `start` 通常没事（服务已就绪），
@@ -162,7 +193,10 @@ NMPC 失败 → ready_for_tracking=false
 
 ## 下一步 checklist
 
-- [ ] **问用户选 A/B/C 哪条路线**（控制层）
+- [ ] **先读 `对接进度/` 目录**（队友在这里写进展），再看本文件
+- [ ] **问用户选 0/A/B/C 哪条路线**（默认建议 0：对齐队友）
+- [ ] 找 Dimitri-Yu 要适配代码，或复刻 `lus_backend=control_manager` + 真值适配
+- [ ] 把 LUS 与 managers 固定到队友验证过的 commit，复核能否复现
 - [ ] 试 A：改 `laser_uav_controllers/params/nmpc_controller/crazyflie.yaml` 的 `R` 与 `N`，重启 `control_manager`，看 `QP solver` 是否还报错
 - [ ] 判据：看板出现 `state=TRACKING`、`waypoint_count>0`、**高度能稳住 30 秒不下沉**
 - [ ] 补 `takeoff` 请求排队重试
@@ -176,6 +210,8 @@ NMPC 失败 → ready_for_tracking=false
 ## 文档地图
 
 | 想知道什么 | 看哪 |
+|---|---|
+| **队友做到哪了** | `对接进度/README.md` 与各成员目录（**新会话先看这个**） |
 |---|---|
 | 项目是什么、为什么这样分层 | `README.md` |
 | 规则书要点、`[TBD]` 有哪些 | `docs/06-规则要点.md` |
