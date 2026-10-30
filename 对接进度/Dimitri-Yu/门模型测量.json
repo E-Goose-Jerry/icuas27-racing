@@ -1,0 +1,195 @@
+{
+  "date": "2026-10-30",
+  "coordinate_frame": "Gazebo world",
+  "flight_ready": false,
+  "gate_order": null,
+  "crossing_directions": null,
+  "method": "OBJ triangle line intersections at five offsets on each axis, independently checked against STL; identity SDF transforms verified",
+  "limitations": [
+    "Specific to the pinned upright mesh",
+    "No flight or vision validation",
+    "Unsigned normal axes do not establish traversal direction",
+    "World coordinates require conversion to calibrated estimator coordinates"
+  ],
+  "source_sha256": {
+    "crazyflie_map.world": "ed5698ea30f45ddd605af31624a109450bc7100de317b947ff4182f8758efe1b",
+    "model.sdf": "226dba66b22b1461ea9386162760eda1cda6960357c380482e18283c84b58572",
+    "obstacles_crazyrun.obj": "7fafe3fbc9d5117737d99a2d997c3d7a7857f2aaa1ed218090078b3fb382b5d3",
+    "obstacles_crazyrun.stl": "b056647170a90a9669c33f05a23328f04fa4401bd6cf452060e0901f35a67685"
+  },
+  "gates": [
+    {
+      "mesh_object": "Cube",
+      "world_center_m": [
+        -0.117037,
+        -0.977882,
+        1.074406
+      ],
+      "opening_width_m": 0.5,
+      "opening_height_m": 0.5,
+      "normal_axis_yaw_rad_mod_pi": 1.570796,
+      "normal_axis_yaw_deg_mod_180": 90.0,
+      "visual_collision_agree": true,
+      "visual_collision_max_intersection_delta_m": 4.331054687112257e-07,
+      "cross_section_pairs_checked": 10,
+      "collision_issues": []
+    },
+    {
+      "mesh_object": "Cube.001",
+      "world_center_m": [
+        -0.33382,
+        -2.773833,
+        0.574406
+      ],
+      "opening_width_m": 0.5,
+      "opening_height_m": 0.5,
+      "normal_axis_yaw_rad_mod_pi": 0.954596,
+      "normal_axis_yaw_deg_mod_180": 54.694,
+      "visual_collision_agree": true,
+      "visual_collision_max_intersection_delta_m": 4.33105468822248e-07,
+      "cross_section_pairs_checked": 10,
+      "collision_issues": []
+    },
+    {
+      "mesh_object": "Cube.002",
+      "world_center_m": [
+        -1.554883,
+        -3.697327,
+        1.074406
+      ],
+      "opening_width_m": 0.5,
+      "opening_height_m": 0.5,
+      "normal_axis_yaw_rad_mod_pi": 0.0,
+      "normal_axis_yaw_deg_mod_180": 0.0,
+      "visual_collision_agree": true,
+      "visual_collision_max_intersection_delta_m": 4.331054687112257e-07,
+      "cross_section_pairs_checked": 10,
+      "collision_issues": []
+    },
+    {
+      "mesh_object": "Cube.003",
+      "world_center_m": [
+        -3.280694,
+        -3.550683,
+        0.574406
+      ],
+      "opening_width_m": 0.5,
+      "opening_height_m": 0.5,
+      "normal_axis_yaw_rad_mod_pi": 2.267285,
+      "normal_axis_yaw_deg_mod_180": 129.906,
+      "visual_collision_agree": true,
+      "visual_collision_max_intersection_delta_m": 4.3310546887775914e-07,
+      "cross_section_pairs_checked": 10,
+      "collision_issues": []
+    },
+    {
+      "mesh_object": "Cube.004",
+      "world_center_m": [
+        -3.883241,
+        -2.146863,
+        1.074406
+      ],
+      "opening_width_m": 0.5,
+      "opening_height_m": 0.5,
+      "normal_axis_yaw_rad_mod_pi": 1.570797,
+      "normal_axis_yaw_deg_mod_180": 90.0,
+      "visual_collision_agree": true,
+      "visual_collision_max_intersection_delta_m": 4.331054687112257e-07,
+      "cross_section_pairs_checked": 10,
+      "collision_issues": []
+    },
+    {
+      "mesh_object": "Cube.005",
+      "world_center_m": [
+        -3.152106,
+        -0.479501,
+        1.074406
+      ],
+      "opening_width_m": 0.5,
+      "opening_height_m": 0.5,
+      "normal_axis_yaw_rad_mod_pi": 0.226989,
+      "normal_axis_yaw_deg_mod_180": 13.006,
+      "visual_collision_agree": true,
+      "visual_collision_max_intersection_delta_m": 4.3310546876673683e-07,
+      "cross_section_pairs_checked": 10,
+      "collision_issues": []
+    },
+    {
+      "mesh_object": "Cube.006",
+      "world_center_m": [
+        -1.741919,
+        -0.218505,
+        0.574406
+      ],
+      "opening_width_m": 0.5,
+      "opening_height_m": 0.5,
+      "normal_axis_yaw_rad_mod_pi": 0.0,
+      "normal_axis_yaw_deg_mod_180": 0.0,
+      "visual_collision_agree": false,
+      "visual_collision_max_intersection_delta_m": null,
+      "cross_section_pairs_checked": 0,
+      "collision_issues": [
+        {
+          "offset_ratio": -0.4,
+          "axis": "horizontal",
+          "collision_hits_m": []
+        },
+        {
+          "offset_ratio": -0.4,
+          "axis": "vertical",
+          "collision_hits_m": []
+        },
+        {
+          "offset_ratio": -0.2,
+          "axis": "horizontal",
+          "collision_hits_m": []
+        },
+        {
+          "offset_ratio": -0.2,
+          "axis": "vertical",
+          "collision_hits_m": []
+        },
+        {
+          "offset_ratio": 0.0,
+          "axis": "horizontal",
+          "collision_hits_m": []
+        },
+        {
+          "offset_ratio": 0.0,
+          "axis": "vertical",
+          "collision_hits_m": []
+        },
+        {
+          "offset_ratio": 0.2,
+          "axis": "horizontal",
+          "collision_hits_m": []
+        },
+        {
+          "offset_ratio": 0.2,
+          "axis": "vertical",
+          "collision_hits_m": []
+        },
+        {
+          "offset_ratio": 0.4,
+          "axis": "horizontal",
+          "collision_hits_m": []
+        },
+        {
+          "offset_ratio": 0.4,
+          "axis": "vertical",
+          "collision_hits_m": []
+        }
+      ]
+    }
+  ],
+  "runtime_source_hashes_verified": true,
+  "runtime_world": "crazyflie_map",
+  "visual_triangle_count": 1512,
+  "collision_triangle_count": 1296,
+  "collision_triangle_bboxes_overlapping_Cube_006": 0,
+  "diagnostic_checks_passed": [
+    "four analytic rotated and translated rings",
+    "missing collision rejected",
+    "solid box rejected"
+  ]
+}
