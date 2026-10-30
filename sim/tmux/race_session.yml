@@ -1,0 +1,57 @@
+# Competition session: the official LUS stack plus the race layer.
+#
+# This mirrors laser_uav_system/tmux/one_drone_px4/session.yml (same windows, same
+# order, same sleep offsets) and adds:
+#   * the Crazyflie airframe instead of x500
+#   * the crazyflie_map world
+#   * a "race" window with the mission node and the ground station
+#
+# Anything that differs from the official session is deliberate and marked below.
+name: icuas27_race
+root: ./
+startup_window: race
+pre_window: >
+  export UAV_NAME=${UAV_NAME:-uav1};
+  export UAV_TYPE=crazyflie;
+  export REAL_UAV=false;
+  export PYTHONPATH=/opt/icuas27_racing:$PYTHONPATH;
+  export ICUAS27_PLATFORM=sim;
+  export ICUAS27_STATUS_FILE=/tmp/icuas27_race/status.json
+windows:
+  - spawn:
+      layout: even-horizontal
+      panes:
+        # DIFFERENT from upstream: world defaults to crazyflie_map (laser_crazyflie)
+        - ros2 launch laser_uav_simulation gazebo.launch.py real_time:=1.0 world:=crazyflie_map
+        - ros2 launch laser_uav_simulation spawn_drones.launch.py spawn_drones_file:=/opt/icuas27_racing/sim/configs/spawn.yaml
+  - api:
+      layout: even-horizontal
+      panes:
+        - sleep 1; ros2 launch laser_uav_hw_api px4_api.launch.py
+        - sleep 1; ros2 run laser_uav_simulation autostart.py
+  - estimation:
+      layout: tiled
+      panes:
+        - sleep 1; ros2 launch laser_uav_managers estimation_manager.launch.py
+  - control:
+      layout: tiled
+      panes:
+        - sleep 1; ros2 launch laser_uav_managers control_manager.launch.py
+  - planning:
+      layout: tiled
+      panes:
+        - sleep 1; ros2 launch laser_uav_managers planning_manager.launch.py planning_manager_file:=/opt/icuas27_racing/sim/configs/planning_manager.yaml
+  - race:
+      layout: tiled
+      panes:
+        - sleep 2; ros2 launch icuas27_racing race.launch.py course_file:=/opt/icuas27_racing/course/provisional_sample.json
+        - sleep 2; python3 -m ground_station.server --host 0.0.0.0 --port 8080
+        - 'history -s ros2 topic echo /icuas27/race_status'
+        - 'history -s ros2 service call /icuas27/race_control icuas27_interfaces/srv/RaceControl "{command: start, reason: operator}"'
+  - commands:
+      layout: even-horizontal
+      panes:
+        - 'history -s ros2 service call /$UAV_NAME/hw_api/arm std_srvs/srv/Trigger {}'
+        - 'history -s ros2 service call /$UAV_NAME/control_manager/takeoff std_srvs/srv/Trigger {}'
+        - 'history -s ros2 service call /$UAV_NAME/control_manager/land std_srvs/srv/Trigger {}'
+        - 'history -s ros2 topic echo /$UAV_NAME/estimation_manager/estimation --no-arr'

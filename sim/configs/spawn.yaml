@@ -1,0 +1,14 @@
+# Vehicle spawn list, same schema as laser_uav_system's
+# tmux/one_drone_px4/configs/spawn.yaml.
+#
+# Differences from the upstream file, all deliberate:
+#   * type crazyflie instead of x500 (official laser_crazyflie add-on)
+#   * --enable_ai_deck so the front camera exists (mono8 324x244 @30 Hz)
+#   * spawn at 0.3 m, the Crazyflie sits low
+/**/**:
+  ros__parameters:
+    - id: 1
+      type: "crazyflie"
+      fcu: "px4"
+      pose_spawn: [0.0, 0.0, 0.3, 0.0]   # x y z yaw
+      sensors: "--enable_ground_truth --enable_ai_deck"

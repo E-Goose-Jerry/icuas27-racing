@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>icuas27_racing</name>
+  <version>0.1.0</version>
+  <description>
+    Competition layer for the ICUAS 2027 autonomous drone racing entry: gate
+    detection, race mission state machine and the ground-station bridge. It
+    drives the LASER UAV System (laser_msgs, laser_uav_managers) instead of
+    reimplementing planning or control.
+  </description>
+  <maintainer email="duanqinruiwang@gmail.com">E-Goose-Jerry</maintainer>
+  <license>BSD-3-Clause</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
+  <exec_depend>std_srvs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>laser_msgs</exec_depend>
+  <exec_depend>icuas27_interfaces</exec_depend>
+  <exec_depend>python3-opencv</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

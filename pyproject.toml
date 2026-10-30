@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "icuas27-racing"
+version = "0.1.0"
+description = "Competition layer for the ICUAS 2027 autonomous drone racing entry"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "BSD-3-Clause" }
+authors = [{ name = "E-Goose-Jerry", email = "duanqinruiwang@gmail.com" }]
+# Deliberately empty: racing_core and ground_station use the standard library only,
+# so the logic can be tested on a laptop, in the ROS container and on Windows.
+dependencies = []
+
+[project.optional-dependencies]
+# Only the ROS-side helpers need these, and they come from apt/rosdep there.
+web = ["fastapi>=0.110", "uvicorn>=0.29"]
+
+[project.scripts]
+icuas27-ground-station = "ground_station.server:main"
+
+[tool.setuptools]
+packages = ["racing_core", "ground_station"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_classes = ["Test*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

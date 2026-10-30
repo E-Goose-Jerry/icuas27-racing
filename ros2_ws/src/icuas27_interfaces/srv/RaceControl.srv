@@ -1,0 +1,7 @@
+# Operator commands from the ground station.
+string command                     # start / abort / safe_stop / reset
+string reason
+---
+bool accepted
+string state
+string message

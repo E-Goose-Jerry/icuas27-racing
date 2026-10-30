@@ -1,0 +1,54 @@
+# The competition logic is pure standard library, so the whole test suite runs on
+# a bare runner in a few seconds. That is the point: a red check means the rules
+# or the state machine regressed, never "the environment differed".
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  core:
+    name: racing_core + ground station
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: unit tests
+        run: python3 -m unittest discover -s tests -t . -v
+      - name: course files are valid
+        run: python3 tools/make_courses.py
+      - name: working tree stayed clean
+        run: git diff --exit-code course/
+
+  ros-package:
+    name: icuas27_racing package (no ROS runtime)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - run: pip install pytest
+      - name: package tests
+        working-directory: ros2_ws/src/icuas27_racing
+        run: python3 -m pytest test -q
+      - name: nodes at least compile
+        run: python3 -m py_compile ros2_ws/src/icuas27_racing/icuas27_racing/*.py ros2_ws/src/icuas27_racing/icuas27_racing/detectors/*.py
+
+  shell:
+    name: shell scripts parse
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: bash -n
+        run: |
+          set -e
+          for script in sim/run_sim.sh sim/docker/*.sh sim/tmux/start.sh tools/*.sh; do
+            echo "checking $script"
+            bash -n "$script"
+          done

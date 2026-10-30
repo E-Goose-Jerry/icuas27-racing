@@ -1,0 +1,25 @@
+# planning_manager configuration for racing.
+#
+# planner: pmm  -> minimum-time trajectories (laser_uav_planners README). For a
+# course made of gate waypoints this is the right backend; MINCO is the smooth
+# minimum-snap one and is the upstream default.
+#
+# The vehicle limits used by PMM are NOT here: they live in
+# laser_uav_planners/params/agile_planner/crazyflie.yaml
+# (max_accel 14.0 m/s^2, max_vel 3.0 m/s, default_vel 1.0 m/s), installed by
+# laser_crazyflie/install_crazyflie.sh.
+/**/**:
+  ros__parameters:
+    planner: pmm
+    rate:
+      reference_horizon: 100.0
+    control_state_timeout: 0.5
+    planning_timeout: 5.0
+    waypoint_hold_time: 0.0          # never stop on a gate waypoint while racing
+    minco:
+      max_velocity: 3.0
+      max_acceleration: 14.0
+      sampling_step: 0.01
+    super:
+      timeout: 0.5
+      sampling_step: 0.01

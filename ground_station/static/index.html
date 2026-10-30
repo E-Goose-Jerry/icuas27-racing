@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ICUAS 2027 · Race Ground Station</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --panel: #161b22;
+    --panel-2: #1c2230;
+    --line: #2b3444;
+    --text: #e6edf3;
+    --muted: #8b98a9;
+    --ok: #3fb950;
+    --warn: #d29922;
+    --bad: #f85149;
+    --accent: #58a6ff;
+    --gate: #6e7681;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+    font: 14px/1.5 "Inter", "Noto Sans SC", system-ui, -apple-system, sans-serif;
+  }
+  header {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    padding: 14px 22px; border-bottom: 1px solid var(--line); background: var(--panel);
+  }
+  header h1 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: .3px; }
+  header .sub { color: var(--muted); font-size: 12px; }
+  .spacer { flex: 1 1 auto; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--muted);
+  }
+  .badge.ok { color: var(--ok); border-color: #1f6f34; }
+  .badge.warn { color: var(--warn); border-color: #6b4d10; }
+  .badge.bad { color: var(--bad); border-color: #7d2420; }
+  .badge.state-race { color: var(--accent); border-color: #1d4d84; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  main {
+    display: grid; gap: 16px; padding: 18px 22px 40px;
+    grid-template-columns: minmax(320px, 1fr) minmax(360px, 1.25fr);
+    align-items: start;
+  }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .col { display: grid; gap: 16px; align-content: start; }
+  .panel.full { grid-column: 1 / -1; }
+  .panel {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+    padding: 16px 18px;
+  }
+  .panel h2 {
+    margin: 0 0 12px; font-size: 12px; text-transform: uppercase;
+    letter-spacing: .8px; color: var(--muted); font-weight: 600;
+  }
+  .timers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .timer .k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .6px; }
+  .timer .v { font-variant-numeric: tabular-nums; font-size: 30px; font-weight: 650; letter-spacing: -.5px; }
+  .timer .v.small { font-size: 22px; font-weight: 600; }
+  .timer .v.adjusted { color: var(--accent); }
+  .gates { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    min-width: 44px; text-align: center; padding: 8px 10px; border-radius: 9px;
+    border: 1px solid var(--line); background: var(--panel-2); color: var(--muted);
+    font-weight: 600; font-variant-numeric: tabular-nums; transition: all .15s ease;
+  }
+  .chip.passed { color: var(--ok); border-color: #1f6f34; background: #12241a; }
+  .chip.target {
+    color: #0d1117; background: var(--accent); border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(88, 166, 255, .18);
+  }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 13px; }
+  .kv .k { color: var(--muted); }
+  .kv .v { text-align: right; font-variant-numeric: tabular-nums; }
+  svg#map { width: 100%; height: auto; display: block; border-radius: 8px; background: #0a0e14; }
+  .legend { display: flex; gap: 14px; color: var(--muted); font-size: 11px; margin-top: 8px; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+  ol.log { margin: 0; padding-left: 18px; font-size: 12.5px; color: var(--muted); max-height: 190px; overflow: auto; }
+  ol.log li { margin-bottom: 3px; }
+  ol.log li:first-child { color: var(--text); }
+  .cmd {
+    display: block; margin-top: 6px; padding: 8px 10px; border-radius: 7px;
+    background: #0a0e14; border: 1px solid var(--line); color: #a5d6ff;
+    font: 12px/1.45 ui-monospace, "SF Mono", Menlo, monospace; overflow-x: auto; white-space: pre;
+  }
+  .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 26px 0; }
+  .warnline { color: var(--warn); }
+  .badline { color: var(--bad); }
+</style>
+</head>
+<body>
+<header>
+  <h1>ICUAS 2027 · 地面站</h1>
+  <span class="sub" id="course-name">等待课程…</span>
+  <span class="spacer"></span>
+  <span class="badge" id="conn"><span class="dot"></span><span id="conn-text">连接中</span></span>
+  <span class="badge" id="safety"><span class="dot"></span><span id="safety-text">安全状态未知</span></span>
+  <span class="badge" id="state">IDLE</span>
+</header>
+
+<main>
+  <div class="col">
+    <section class="panel">
+      <h2>计时</h2>
+      <div class="timers">
+        <div class="timer">
+          <div class="k">T_adj 调整后</div>
+          <div class="v adjusted" id="adjusted">-</div>
+        </div>
+        <div class="timer">
+          <div class="k">净用时</div>
+          <div class="v small" id="elapsed">-</div>
+        </div>
+        <div class="timer">
+          <div class="k">罚时</div>
+          <div class="v small" id="penalty">0</div>
+        </div>
+      </div>
+      <div style="height:16px"></div>
+      <div class="kv">
+        <div class="k">门进度</div><div class="v" id="progress">-</div>
+        <div class="k">圈数</div><div class="v" id="laps">-</div>
+        <div class="k">目标门</div><div class="v" id="target">-</div>
+        <div class="k">名次有效性</div><div class="v" id="ranking">-</div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>罚时明细</h2>
+      <div id="penalties"><div class="empty">没有罚时</div></div>
+    </section>
+
+    <section class="panel">
+      <h2>事件</h2>
+      <ol class="log" id="log"><li>等待遥测…</li></ol>
+    </section>
+  </div>
+
+  <div class="col">
+    <section class="panel">
+      <h2>门序列</h2>
+      <div class="gates" id="gates"><div class="empty">暂无门数据</div></div>
+      <div style="height:14px"></div>
+      <h2>俯视地图</h2>
+      <svg id="map" viewBox="0 0 600 400" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="legend">
+        <span><i style="background:#58a6ff"></i>目标门</span>
+        <span><i style="background:#3fb950"></i>已通过</span>
+        <span><i style="background:#6e7681"></i>未通过</span>
+        <span><i style="background:#f85149;border-radius:50%"></i>机体位置</span>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel full">
+    <h2>操作（本页只读，命令在终端里执行）</h2>
+    <span class="sub">比赛开始 / 中止 / 急停都走 race node 的服务，页面上不会替你按下去。</span>
+    <code class="cmd" id="cmd-start">ros2 service call /icuas27/race_control icuas27_interfaces/srv/RaceControl "{command: 'start', reason: 'operator'}"</code>
+    <code class="cmd" id="cmd-abort">ros2 service call /icuas27/race_control icuas27_interfaces/srv/RaceControl "{command: 'abort', reason: 'operator'}"</code>
+    <code class="cmd" id="cmd-stop">ros2 service call /icuas27/race_control icuas27_interfaces/srv/RaceControl "{command: 'safe_stop', reason: 'operator'}"</code>
+    <code class="cmd" id="cmd-reset">ros2 service call /icuas27/race_control icuas27_interfaces/srv/RaceControl "{command: 'reset', reason: 'operator'}"</code>
+  </section>
+</main>
+
+<script>
+(function () {
+  "use strict";
+
+  const $ = (id) => document.getElementById(id);
+  const MAP = { w: 600, h: 400, pad: 44 };
+  let lastDoc = null;
+  let courseBounds = null;
+
+  function fmt(seconds) {
+    if (seconds === null || seconds === undefined || Number.isNaN(seconds)) return "-";
+    const sign = seconds < 0 ? "-" : "";
+    const v = Math.abs(seconds);
+    const m = Math.floor(v / 60);
+    const s = (v - m * 60).toFixed(3).padStart(6, "0");
+    return sign + m + ":" + s;
+  }
+
+  function stateClass(state) {
+    if (state === "RACE") return "badge state-race";
+    if (state === "DONE") return "badge ok";
+    if (state === "ABORTED" || state === "SAFE_STOP") return "badge bad";
+    return "badge";
+  }
+
+  function safetyClass(level) {
+    if (level === "OK") return "badge ok";
+    if (level === "WARN") return "badge warn";
+    return "badge bad";
+  }
+
+  function renderTimers(doc) {
+    const timer = (doc.race && doc.race.timer) || {};
+    $("adjusted").textContent = fmt(timer.adjusted);
+    $("elapsed").textContent = fmt(timer.elapsed);
+    const count = timer.penalty_count || 0;
+    $("penalty").textContent = count ? "+" + (timer.penalty_total || 0).toFixed(1) + "s" : "0";
+  }
+
+  function renderProgress(doc) {
+    const race = doc.race || {};
+    $("progress").textContent = (race.gate_index || 0) + " / " + (race.total_gates || 0);
+    const laps = doc.course ? doc.course.laps : race.laps;
+    $("laps").textContent = (race.laps_done || 0) + " / " + (laps || 0);
+    $("target").textContent = race.target_gate_id ? ("#" + race.target_gate_id) : "-";
+    const ranking = $("ranking");
+    if (race.stuck) {
+      // Rulebook 3.2: a missed gate must be retried, never skipped, so this is
+      // expected behaviour and has to look like it, not like a stuck bug.
+      ranking.textContent = "卡在门 #" + (race.target_gate_id || "?") +
+        "（第 " + (race.attempts || 0) + " 次重试，不跳过）";
+      ranking.className = "v warnline";
+    } else if (race.incomplete) {
+      ranking.textContent = "不计排名（有漏门/中止）";
+      ranking.className = "v badline";
+    } else if (race.skipping_allowed) {
+      ranking.textContent = "有效（注意：已开启跳过模式，仅供测试）";
+      ranking.className = "v warnline";
+    } else {
+      ranking.textContent = "有效";
+      ranking.className = "v";
+    }
+  }
+
+  function renderGates(doc) {
+    const host = $("gates");
+    const gates = Array.isArray(doc.gates) ? doc.gates : [];
+    if (!gates.length) {
+      host.innerHTML = '<div class="empty">暂无门数据</div>';
+      return;
+    }
+    host.innerHTML = gates.map(function (gate) {
+      const cls = gate.target ? "chip target" : (gate.passed ? "chip passed" : "chip");
+      return '<div class="' + cls + '">#' + gate.id + "</div>";
+    }).join("");
+  }
+
+  function renderPenalties(doc) {
+    const host = $("penalties");
+    const list = ((doc.race && doc.race.timer && doc.race.timer.penalties) || []);
+    if (!list.length) {
+      host.innerHTML = '<div class="empty">没有罚时</div>';
+      return;
+    }
+    host.innerHTML = list.map(function (p) {
+      const gate = p.gate_id ? ("门 #" + p.gate_id) : "全局";
+      return '<div class="kv" style="margin-bottom:6px"><div class="k">' +
+        gate + " · " + p.reason + "</div><div class=\"v badline\">+" +
+        Number(p.seconds).toFixed(1) + "s</div></div>";
+    }).join("");
+  }
+
+  function renderLog(doc) {
+    const history = (doc.race && doc.race.history) || [];
+    if (!history.length) {
+      $("log").innerHTML = "<li>等待遥测…</li>";
+      return;
+    }
+    $("log").innerHTML = history
+      .slice()
+      .reverse()
+      .map(function (line) { return "<li>" + line.replace(/</g, "&lt;") + "</li>"; })
+      .join("");
+  }
+
+  function computeBounds(course, pose) {
+    const xs = [];
+    const ys = [];
+    (course.gates || []).forEach(function (gate) {
+      const p = gate.position || {};
+      xs.push(Number(p.x) || 0);
+      ys.push(Number(p.y) || 0);
+    });
+    if (pose) { xs.push(pose.x); ys.push(pose.y); }
+    if (!xs.length) return { minX: -5, maxX: 5, minY: -5, maxY: 5 };
+    const minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs);
+    const minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
+    const spanX = Math.max(maxX - minX, 2), spanY = Math.max(maxY - minY, 2);
+    const pad = Math.max(spanX, spanY) * 0.18;
+    return { minX: minX - pad, maxX: maxX + pad, minY: minY - pad, maxY: maxY + pad };
+  }
+
+  function renderMap(doc) {
+    const svg = $("map");
+    const course = doc.course || {};
+    const pose = doc.race && doc.race.pose ? doc.race.pose : null;
+    const b = computeBounds(course, pose);
+    const innerW = MAP.w - 2 * MAP.pad;
+    const innerH = MAP.h - 2 * MAP.pad;
+    const sx = innerW / Math.max(0.001, b.maxX - b.minX);
+    const sy = innerH / Math.max(0.001, b.maxY - b.minY);
+    const scale = Math.min(sx, sy);
+
+    function tx(x) { return MAP.pad + (x - b.minX) * scale + (innerW - (b.maxX - b.minX) * scale) / 2; }
+    // simulation Y up, SVG Y down: flip so the map matches the arena
+    function ty(y) { return MAP.h - (MAP.pad + (y - b.minY) * scale + (innerH - (b.maxY - b.minY) * scale) / 2); }
+
+    const parts = [];
+    parts.push('<rect x="0" y="0" width="' + MAP.w + '" height="' + MAP.h + '" fill="#0a0e14"/>');
+
+    const gates = course.gates || [];
+    const stateById = {};
+    (doc.gates || []).forEach(function (g) { stateById[g.id] = g; });
+
+    // path through gate centres
+    if (gates.length > 1) {
+      const points = gates.map(function (g) {
+        const p = g.position || {};
+        return tx(Number(p.x) || 0).toFixed(1) + "," + ty(Number(p.y) || 0).toFixed(1);
+      });
+      parts.push('<polyline points="' + points.join(" ") +
+        '" fill="none" stroke="#2b3444" stroke-width="1.5" stroke-dasharray="4 5"/>');
+    }
+
+    gates.forEach(function (gate) {
+      const p = gate.position || {};
+      const cx = tx(Number(p.x) || 0);
+      const cy = ty(Number(p.y) || 0);
+      const yaw = Number(gate.yaw) || 0;
+      const half = (Number(gate.width) || 1) / 2 * scale;
+      // gate opening seen from above: a line perpendicular to the normal
+      const dx = -Math.sin(yaw) * half;
+      const dy = -Math.cos(yaw) * half;
+      const info = stateById[gate.id] || {};
+      const colour = info.target ? "#58a6ff" : (info.passed ? "#3fb950" : "#6e7681");
+      const width = info.target ? 5 : 3;
+      parts.push('<line x1="' + (cx - dx).toFixed(1) + '" y1="' + (cy + dy).toFixed(1) +
+        '" x2="' + (cx + dx).toFixed(1) + '" y2="' + (cy - dy).toFixed(1) +
+        '" stroke="' + colour + '" stroke-width="' + width + '" stroke-linecap="round"/>');
+      parts.push('<text x="' + cx.toFixed(1) + '" y="' + (cy - 10).toFixed(1) +
+        '" fill="' + colour + '" font-size="11" text-anchor="middle" font-family="ui-monospace, monospace">' +
+        gate.id + "</text>");
+    });
+
+    if (pose) {
+      const px = tx(pose.x);
+      const py = ty(pose.y);
+      parts.push('<circle cx="' + px.toFixed(1) + '" cy="' + py.toFixed(1) +
+        '" r="5" fill="#f85149" stroke="#0d1117" stroke-width="1.5"/>');
+      parts.push('<text x="' + (px + 9).toFixed(1) + '" y="' + (py + 4).toFixed(1) +
+        '" fill="#8b98a9" font-size="10" font-family="ui-monospace, monospace">' +
+        Number(pose.z).toFixed(1) + "m</text>");
+    }
+
+    parts.push('<text x="12" y="' + (MAP.h - 10) + '" fill="#4a5464" font-size="10" ' +
+      'font-family="ui-monospace, monospace">' +
+      (b.maxX - b.minX).toFixed(1) + "m x " + (b.maxY - b.minY).toFixed(1) + "m</text>");
+
+    svg.innerHTML = parts.join("");
+  }
+
+  function render(doc) {
+    lastDoc = doc;
+    const course = doc.course || {};
+    $("course-name").textContent = (course.name || "未知赛道") +
+      (course.gate_count ? " · " + course.gate_count + " 门 × " + (course.laps || 1) + " 圈" : "");
+
+    const race = doc.race || {};
+    const stateEl = $("state");
+    stateEl.textContent = race.state || "UNKNOWN";
+    stateEl.className = stateClass(race.state);
+
+    const safety = (doc.safety && doc.safety.last) || {};
+    const safetyEl = $("safety");
+    safetyEl.className = safetyClass(safety.level);
+    $("safety-text").textContent = safety.level === "OK"
+      ? "安全"
+      : (safety.level || "?") + (safety.reasons && safety.reasons.length ? " · " + safety.reasons.join(",") : "");
+
+    renderTimers(doc);
+    renderProgress(doc);
+    renderGates(doc);
+    renderPenalties(doc);
+    renderLog(doc);
+    renderMap(doc);
+  }
+
+  function setConn(ok, text) {
+    $("conn").className = ok ? "badge ok" : "badge warn";
+    $("conn-text").textContent = text;
+  }
+
+  function connect() {
+    if (!window.EventSource) { poll(); return; }
+    const source = new EventSource("/api/events");
+    source.onopen = function () { setConn(true, "实时"); };
+    source.onmessage = function (event) {
+      setConn(true, "实时");
+      try { render(JSON.parse(event.data)); } catch (err) { /* ignore a partial frame */ }
+    };
+    source.onerror = function () {
+      setConn(false, "重连中");
+      source.close();
+      setTimeout(connect, 2000);
+    };
+  }
+
+  function poll() {
+    fetch("/api/status").then(function (r) {
+      if (!r.ok) throw new Error(String(r.status));
+      return r.json();
+    }).then(function (doc) {
+      setConn(true, "轮询");
+      render(doc);
+    }).catch(function () {
+      setConn(false, "无遥测");
+    }).finally(function () { setTimeout(poll, 1000); });
+  }
+
+  connect();
+})();
+</script>
+</body>
+</html>
