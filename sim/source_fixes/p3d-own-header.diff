@@ -1,0 +1,8 @@
+--- a/src/gazebo_ros_p3d.cpp
++++ b/src/gazebo_ros_p3d.cpp
+@@ -15,3 +15,3 @@
+-#include "gazebo_plugins/gazebo_ros_p3d.hpp"
+-
++#include "laser_gazebo_resources/gazebo_ros_p3d.hpp"
++
+ #include <array>

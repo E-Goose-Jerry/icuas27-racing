@@ -1,0 +1,12 @@
+{
+  "name": "integration_smoke_virtual_checkpoint",
+  "laps": 1,
+  "start": {"x": 0.0, "y": 0.0, "z": 0.0},
+  "takeoff_height": 1.5,
+  "landing": {"x": 0.0, "y": 0.0, "z": 1.5},
+  "gates": [
+    {"id": 1, "name": "virtual_checkpoint", "position": {"x": 0.8, "y": 0.0, "z": 1.5}, "yaw": 0.0, "yaw_source": "integration_test", "width": 1.0, "height": 1.0}
+  ],
+  "source": "Local integration test only; no physical gate is spawned",
+  "notes": ["One virtual checkpoint for interface validation, not the competition arena.", "Coordinates are in the LUS estimation frame, not the Gazebo world frame.", "Use lead=0.35 and default_speed=0.3; takeoff.height in LUS must be 1.5 m."]
+}

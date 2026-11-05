@@ -24,6 +24,7 @@ from icuas27_interfaces.msg import GateObservation
 
 from .detectors.common import Intrinsics, PixelCandidate, bearing, select_best
 from .detectors.color_gate import ColorGateDetector, DetectorSettings
+from .detectors.grayscale_gate import GrayscaleGateDetector
 
 
 def _default_intrinsics(width: int, height: int) -> Intrinsics:
@@ -73,7 +74,10 @@ class GateDetectorNode(Node):
             min_area_px=float(self.declare_parameter("min_area_px", 400.0).value),
             expected_aspect=float(self.declare_parameter("expected_aspect", 1.0).value),
         )
-        self.detector = ColorGateDetector(settings)
+        backend = str(self.declare_parameter("detector_backend", "color").value)
+        if backend not in ("color", "grayscale"):
+            raise ValueError("detector_backend must be color or grayscale")
+        self.detector = GrayscaleGateDetector(settings) if backend == "grayscale" else ColorGateDetector(settings)
         self._intrinsics: Intrinsics | None = None
         self._frames = 0
         self._detections = 0
@@ -110,6 +114,8 @@ class GateDetectorNode(Node):
     # -- callbacks -------------------------------------------------------
     def _on_camera_info(self, message: CameraInfo) -> None:
         if message.k[0] > 0.0 and message.k[4] > 0.0:
+            changed = (self._intrinsics is None or self._intrinsics.fx != message.k[0]
+                       or self._intrinsics.width != message.width)
             self._intrinsics = Intrinsics(
                 fx=float(message.k[0]),
                 fy=float(message.k[4]),
@@ -118,10 +124,11 @@ class GateDetectorNode(Node):
                 width=int(message.width),
                 height=int(message.height),
             )
-            self.get_logger().info(
-                f"camera calibrated from camera_info: fx={self._intrinsics.fx:.1f} "
-                f"fy={self._intrinsics.fy:.1f}"
-            )
+            if changed:
+                self.get_logger().info(
+                    f"camera calibrated from camera_info: fx={self._intrinsics.fx:.1f} "
+                    f"fy={self._intrinsics.fy:.1f}"
+                )
 
     def _on_image(self, message: Image) -> None:
         frame = self._to_bgr(message)
@@ -161,7 +168,7 @@ class GateDetectorNode(Node):
                 )
             if message.encoding in ("mono8", "rgb8", "8UC1"):
                 dtype = np.uint8
-                channels = 1 if message.encoding == "mono8" else 3
+                channels = 1 if message.encoding in ("mono8", "8UC1") else 3
                 array = np.frombuffer(message.data, dtype=dtype)
                 if channels == 1:
                     array = array.reshape(message.height, message.width)

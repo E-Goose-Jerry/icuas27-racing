@@ -19,6 +19,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, LogInfo
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 
 
 def _default_status_file() -> str:
@@ -33,28 +34,39 @@ def generate_launch_description() -> LaunchDescription:
     image_topic = LaunchConfiguration("image_topic")
     status_file = LaunchConfiguration("status_file")
     publish_debug_image = LaunchConfiguration("publish_debug_image")
+    use_sim_time = ParameterValue(LaunchConfiguration("use_sim_time"), value_type=bool)
 
     race_params = {
         "uav_name": uav_name,
         "course_file": course_file,
         "platform": platform,
-        "auto_start": auto_start,
+        "auto_start": ParameterValue(auto_start, value_type=bool),
         "status_file": status_file,
         "publish_rate": 10.0,
-        "default_speed": 1.0,
-        "lead": 1.5,
+        "default_speed": ParameterValue(LaunchConfiguration("default_speed"), value_type=float),
+        "lead": ParameterValue(LaunchConfiguration("lead"), value_type=float),
         "retry_limit": 2,
+        "use_sim_time": use_sim_time,
+        "lus_backend": LaunchConfiguration("lus_backend"),
     }
 
     detector_params = {
         "uav_name": uav_name,
         "image_topic": image_topic,
-        "publish_debug_image": publish_debug_image,
+        "publish_debug_image": ParameterValue(publish_debug_image, value_type=bool),
+        "use_sim_time": use_sim_time,
+        "detector_backend": LaunchConfiguration("detector_backend"),
     }
 
     return LaunchDescription(
         [
             DeclareLaunchArgument("uav_name", default_value="uav1"),
+            DeclareLaunchArgument("use_sim_time", default_value="true"),
+            DeclareLaunchArgument("lus_backend", default_value="planning_manager",
+                                  description="planning_manager or legacy control_manager"),
+            DeclareLaunchArgument("default_speed", default_value="1.0"),
+            DeclareLaunchArgument("lead", default_value="1.5"),
+            DeclareLaunchArgument("detector_backend", default_value="color"),
             DeclareLaunchArgument(
                 "course_file",
                 default_value=os.environ.get("ICUAS27_COURSE", ""),
